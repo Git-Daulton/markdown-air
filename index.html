@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Markdown Air</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="toolbar">
+        <div class="actions">
+          <button id="open-btn" type="button">Open</button>
+          <button id="save-btn" type="button">Save</button>
+          <button id="save-as-btn" type="button">Save As</button>
+        </div>
+        <div class="toggles">
+          <label class="toggle">
+            <input id="preview-toggle" type="checkbox" />
+            <span>Preview</span>
+          </label>
+          <label class="toggle">
+            <input id="always-on-top-toggle" type="checkbox" />
+            <span>Always on top</span>
+          </label>
+        </div>
+      </header>
+
+      <main id="workspace" class="workspace" data-preview="off">
+        <textarea id="editor" spellcheck="false" aria-label="Markdown editor"></textarea>
+        <section id="preview" class="preview" aria-label="Markdown preview" hidden></section>
+      </main>
+
+      <footer class="statusbar">
+        <span id="status">Untitled.md</span>
+      </footer>
+    </div>
+
+    <dialog id="unsaved-dialog" class="unsaved-dialog">
+      <form method="dialog">
+        <p>You have unsaved changes. Save before closing?</p>
+        <div class="dialog-actions">
+          <button type="submit" value="cancel">Cancel</button>
+          <button type="submit" value="discard">Discard</button>
+          <button type="submit" value="save" class="primary">Save</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

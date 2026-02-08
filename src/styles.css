@@ -1,0 +1,143 @@
+:root {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #202124;
+  background: #f8f8f8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #dddddd;
+  background: #ffffff;
+}
+
+.actions,
+.toggles {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+button {
+  border: 1px solid #cccccc;
+  background: #ffffff;
+  border-radius: 4px;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #f2f2f2;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 0;
+}
+
+.workspace[data-preview="on"] {
+  grid-template-columns: 1fr 1fr;
+}
+
+#editor {
+  width: 100%;
+  height: 100%;
+  resize: none;
+  border: 0;
+  border-right: 1px solid #e4e4e4;
+  font: 14px/1.5 Consolas, "Courier New", monospace;
+  padding: 0.9rem;
+  background: #ffffff;
+  color: #1d1d1d;
+}
+
+#editor:focus {
+  outline: none;
+}
+
+.preview {
+  overflow: auto;
+  padding: 1rem;
+  background: #fcfcfc;
+}
+
+.preview :first-child {
+  margin-top: 0;
+}
+
+.preview pre {
+  overflow-x: auto;
+  padding: 0.6rem;
+  background: #f3f3f3;
+  border-radius: 4px;
+}
+
+.preview code {
+  font-family: Consolas, "Courier New", monospace;
+}
+
+.statusbar {
+  padding: 0.35rem 0.75rem;
+  border-top: 1px solid #dddddd;
+  background: #ffffff;
+  color: #5f6368;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.unsaved-dialog {
+  border: 1px solid #d7d7d7;
+  border-radius: 8px;
+  padding: 0.9rem;
+  width: min(90vw, 420px);
+}
+
+.unsaved-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.dialog-actions .primary {
+  background: #e7f0ff;
+  border-color: #b7ceff;
+}

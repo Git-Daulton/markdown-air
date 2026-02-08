@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Markdown Air",
+  "version": "0.1.0",
+  "identifier": "com.daulton.markdownair",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Markdown Air",
+        "width": 1100,
+        "height": 760,
+        "minWidth": 860,
+        "minHeight": 540
+      }
+    ]
+  },
+  "bundle": {
+    "active": true
+  }
+}
