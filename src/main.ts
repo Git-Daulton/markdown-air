@@ -28,7 +28,6 @@ const state = createInitialState(readSavedAlwaysOnTop());
 const appWindow = getCurrentWindow();
 
 let closeRequestInFlight = false;
-let allowCloseOnce = false;
 let closeRequestedUnlisten: (() => void) | null = null;
 
 const closeGuardGlobal = globalThis as CloseGuardGlobal;
@@ -113,14 +112,8 @@ function registerHandlers(): void {
   void appWindow
     .onCloseRequested(async (event) => {
     console.log(
-      `${CLOSE_LOG_PREFIX} onCloseRequested fired: dirty=${state.dirty}, inFlight=${closeRequestInFlight}, allowCloseOnce=${allowCloseOnce}`
+      `${CLOSE_LOG_PREFIX} onCloseRequested fired: dirty=${state.dirty}, inFlight=${closeRequestInFlight}`
     );
-    if (allowCloseOnce) {
-      allowCloseOnce = false;
-      console.log(`${CLOSE_LOG_PREFIX} allowCloseOnce pass-through; native close allowed`);
-      return;
-    }
-
     console.log(`${CLOSE_LOG_PREFIX} calling preventDefault() immediately`);
     event.preventDefault();
 
@@ -154,9 +147,13 @@ function registerHandlers(): void {
         return;
       }
 
-      allowCloseOnce = true;
-      console.log(`${CLOSE_LOG_PREFIX} close permitted; allowCloseOnce=true, issuing appWindow.close()`);
-      await appWindow.close();
+      console.log(`${CLOSE_LOG_PREFIX} close permitted; scheduling appWindow.destroy()`);
+      setTimeout(() => {
+        console.log(`${CLOSE_LOG_PREFIX} executing deferred appWindow.destroy()`);
+        void appWindow.destroy().catch((error) => {
+          console.error(`${CLOSE_LOG_PREFIX} appWindow.destroy() failed: ${toMessage(error)}`);
+        });
+      }, 0);
     } finally {
       closeRequestInFlight = false;
       console.log(`${CLOSE_LOG_PREFIX} unsaved flow finished; inFlight=false`);
@@ -174,7 +171,6 @@ function registerHandlers(): void {
   hot?.dispose(() => {
     unregisterCloseGuard("hmr-dispose");
     closeRequestInFlight = false;
-    allowCloseOnce = false;
   });
 }
 
