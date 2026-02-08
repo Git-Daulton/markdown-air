@@ -11,13 +11,33 @@ interface OpenFilePayload {
 }
 
 const ALWAYS_ON_TOP_STORAGE_KEY = "markdown-air.always-on-top";
+const DISABLE_CLOSE_GUARD =
+  (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env
+    ?.VITE_DISABLE_CLOSE_GUARD === "1";
+const CLOSE_LOG_PREFIX = "[close-guard]";
+const CLOSE_GUARD_GLOBAL_KEY = "__markdownAirCloseGuard";
+
+type CloseGuardGlobal = typeof globalThis & {
+  __markdownAirCloseGuard?: {
+    unlisten: (() => void) | null;
+  };
+};
 
 const ui = bindUI();
 const state = createInitialState(readSavedAlwaysOnTop());
 const appWindow = getCurrentWindow();
 
-let closeConfirmed = false;
 let closeRequestInFlight = false;
+let allowCloseOnce = false;
+let closeRequestedUnlisten: (() => void) | null = null;
+
+const closeGuardGlobal = globalThis as CloseGuardGlobal;
+if (!closeGuardGlobal[CLOSE_GUARD_GLOBAL_KEY]) {
+  closeGuardGlobal[CLOSE_GUARD_GLOBAL_KEY] = { unlisten: null };
+}
+
+const closeGuardState = closeGuardGlobal[CLOSE_GUARD_GLOBAL_KEY];
+const hot = (import.meta as ImportMeta & { hot?: { dispose(cb: () => void): void } }).hot;
 
 bootstrap().catch((error) => {
   showError(`Failed to initialize app: ${toMessage(error)}`);
@@ -72,32 +92,89 @@ function registerHandlers(): void {
     }
   });
 
-  void appWindow.onCloseRequested(async (event) => {
-    if (closeConfirmed || !state.dirty) {
+  const unregisterCloseGuard = (reason: string): void => {
+    if (!closeGuardState.unlisten) {
+      return;
+    }
+    closeGuardState.unlisten();
+    closeGuardState.unlisten = null;
+    closeRequestedUnlisten = null;
+    console.log(`${CLOSE_LOG_PREFIX} handler unregistered (${reason})`);
+  };
+
+  if (DISABLE_CLOSE_GUARD) {
+    unregisterCloseGuard("kill-switch");
+    console.log(`${CLOSE_LOG_PREFIX} handler registration skipped (VITE_DISABLE_CLOSE_GUARD=1)`);
+    return;
+  }
+
+  unregisterCloseGuard("replace");
+  console.log(`${CLOSE_LOG_PREFIX} handler registration active`);
+  void appWindow
+    .onCloseRequested(async (event) => {
+    console.log(
+      `${CLOSE_LOG_PREFIX} onCloseRequested fired: dirty=${state.dirty}, inFlight=${closeRequestInFlight}, allowCloseOnce=${allowCloseOnce}`
+    );
+    if (allowCloseOnce) {
+      allowCloseOnce = false;
+      console.log(`${CLOSE_LOG_PREFIX} allowCloseOnce pass-through; native close allowed`);
       return;
     }
 
+    console.log(`${CLOSE_LOG_PREFIX} calling preventDefault() immediately`);
     event.preventDefault();
+
     if (closeRequestInFlight) {
-      return;
-    }
-    closeRequestInFlight = true;
-    const decision = await showUnsavedDialog(ui.unsavedDialog);
-    if (decision === "cancel") {
-      closeRequestInFlight = false;
+      console.log(`${CLOSE_LOG_PREFIX} guard already inFlight=true; ignoring duplicate close request`);
       return;
     }
 
-    if (decision === "save") {
-      const saved = await saveFile();
-      if (!saved) {
-        closeRequestInFlight = false;
+    closeRequestInFlight = true;
+    console.log(`${CLOSE_LOG_PREFIX} unsaved flow started; inFlight=true`);
+    try {
+      let canClose = !state.dirty;
+      if (canClose) {
+        console.log(`${CLOSE_LOG_PREFIX} clean document; close is permitted`);
+      } else {
+        const decision = await showUnsavedDialog(ui.unsavedDialog);
+        console.log(`${CLOSE_LOG_PREFIX} unsaved dialog decision=${decision}`);
+
+        if (decision === "save") {
+          const saved = await saveFile();
+          console.log(`${CLOSE_LOG_PREFIX} save-on-close result=${saved}`);
+          canClose = saved;
+        } else {
+          canClose = decision === "discard";
+        }
+      }
+
+      console.log(`${CLOSE_LOG_PREFIX} confirm-close path executed=${canClose}`);
+      if (!canClose) {
+        console.log(`${CLOSE_LOG_PREFIX} close blocked by user choice or failed save`);
         return;
       }
-    }
 
-    closeConfirmed = true;
-    await appWindow.destroy();
+      allowCloseOnce = true;
+      console.log(`${CLOSE_LOG_PREFIX} close permitted; allowCloseOnce=true, issuing appWindow.close()`);
+      await appWindow.close();
+    } finally {
+      closeRequestInFlight = false;
+      console.log(`${CLOSE_LOG_PREFIX} unsaved flow finished; inFlight=false`);
+    }
+  })
+    .then((unlisten) => {
+      closeRequestedUnlisten = unlisten;
+      closeGuardState.unlisten = unlisten;
+      console.log(`${CLOSE_LOG_PREFIX} handler registered`);
+    })
+    .catch((error) => {
+      console.error(`${CLOSE_LOG_PREFIX} failed to register close handler: ${toMessage(error)}`);
+    });
+
+  hot?.dispose(() => {
+    unregisterCloseGuard("hmr-dispose");
+    closeRequestInFlight = false;
+    allowCloseOnce = false;
   });
 }
 
